@@ -61,6 +61,6 @@ if ($collectionId) { echo '"collection_id": ' . $collectionId . ','; }
 
 echo '"page_number": ' . $pageNumber . ',';
 
-echo '"total_items": ' . total_items();
+echo '"total_items": ' . total_results();
 
 echo '})';
