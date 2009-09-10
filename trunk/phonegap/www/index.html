@@ -47,6 +47,17 @@
              * list item, it emptys the items-show node.
              **/
 
+			// Modify the items/browse/ title based upon whether or not a collection or tag is specified
+			$('#items-browse-title').empty();
+			if (itemMetadata.collection_name) {
+				browseTitle = "Browse Art near "+itemMetadata.collection_name;
+			} else if (itemMetadata.tag_name) {
+				browseTitle = "Browse Art with tag "+itemMetadata.tag_name;
+			} else {
+				browseTitle = "Browse Art";
+			}
+			$('<li>').html('<h1>'+browseTitle+'</h1>').appendTo('#items-browse-title');
+
 			// Empty the items-list div
 			$('#items-list').empty();
 
@@ -103,7 +114,7 @@
 			// Add the appropriate JSON output and callback
 			itemsBrowseUrl += '?output=jsonp&callback=?';
 			
-			if (tagName) { itemsBrowseUrl+='&tagName='+tagName; }
+			if (tagName) { itemsBrowseUrl+='&tags='+tagName; }
 			if (collectionId) { itemsBrowseUrl+='&collection='+collectionId; }
 			
 			// See line 28 for an explaination of the problem.  In the meantime, the lat/long is added
@@ -135,7 +146,7 @@
 			/* Loop through tags, creating list of them w/ CSS classes that will be styled **/
 			$.each(tagData.tags, function(i, tag){
 				// Create a list of item titles on the browse page
-				$('<li class="'+tag.class+'">').html('<a href="#">'+tag.name+'</a>').appendTo('#tags-list');
+				$('<li class="'+tag.class+'">').html('<a href="#" onclick="retrieveItems(null, '+tag.name+', null);">'+tag.name+'</a>').appendTo('#tags-list');
 			});
 		}
 		
@@ -149,9 +160,9 @@
 		function buildPagination(pageNumber, totalNumberItems, tagName, collectionId, collectionName) {
 			// Number of items returned per page of Output
 			var itemsPerPage = 10;
-
+	
 			// If no pageNumber is set, declare it as page one
-			if (pageNumber = null) { pageNumber = 1 }
+			if (!pageNumber) { pageNumber = 1 }
 
 			// Figure out how many item pages you need to create
 			var numberOfItemPages = totalNumberItems / itemsPerPage;
@@ -166,13 +177,13 @@
 			var lastPageNumber = pageNumber - 1;
 			
 			if (pageNumber > 1) {
-				$('<li class="pagination_next">').html('<a href="#" onclick="retrieveItems('+lastPageNumber+', '+tagName+', '+collectionId+');">< Previous Results</a>').appendTo('#item-pagination');
+				$('<li class="pagination_previous">').html('<a href="#" onclick="retrieveItems('+lastPageNumber+', '+tagName+', '+collectionId+');">< Previous Results</a>').appendTo('#item-pagination');
 			}
 			
 			// Display html for next button if there should be one
 			var nextPageNumber = pageNumber + 1;
 			
-			if (pageNumber < totalNumberItems) {
+			if (pageNumber < numberOfItemPages) {
 				$('<li class="pagination_next">').html('<a href="#" onclick="retrieveItems('+nextPageNumber+', '+tagName+', '+collectionId+');">Next Results ></a>').appendTo('#item-pagination');
 			}
 			
@@ -182,10 +193,17 @@
 		/* Specify the basic click interactions on the page; hiding and showing of divs.  There
 		 * may be an elegant way of doing this.  Not sure. [DL]
 		 **/
-		
+
 		$(document).ready(function() {
+			
 			// An initial hide of all the divs on the screen. Seems like a weak implmentation.. maybe not.
-			$('#items-browse, #items-show, #collections-browse, #items-browse-by-tag').hide();
+			$('#places-list, #items-show, #collections-browse, #items-browse-by-tag, #items-browse').hide();
+			
+			// Splash page.  User clicks through and sees the browse page.
+			$('#splash-page').click(function() {
+				$("#splash-page").empty();
+				$("#items-browse").show();
+			});
 			
 			// Top-level navigation, "Places", "Tags", and "Art"
 			$("#nav-places").click(function() {
@@ -247,6 +265,12 @@
 
 	<div id="wrap">
 
+		<!-- Splash page; what a user initially sees upon loading the application -->
+		<div id="splash-page">
+			<h1>Art in the City: DC</h1>
+			<h3>Searching for art close to you</h3>
+		</div>
+
 		<!-- Title header for the mobile application -->
 		<div id="header">
 			<div id="site-title"><a href="#">Art in the City: DC</a></div>
@@ -288,11 +312,11 @@
 		
 				<!-- Displayed by clicking the "Art" link -->
 				<div id="items-browse">	
-					<h1>Browse Art</h1>
+					<!-- The title of the page, "Browse Art" by default, but changes if tags or collections are specified -->
+					<div id="items-browse-title"></div>
 					
 					<!-- The pagination links for items will be displayed in here -->
-					<div id="item-pagination">
-					</div>
+					<div id="item-pagination"></div>
 					
 					<!-- Where item titles are listed on the browse page.  Easily emptied for new pages -->
 					<div id="items-list"></div>
