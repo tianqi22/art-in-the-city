@@ -1,0 +1,311 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+        <title>Art in the City</title>
+		<link rel="stylesheet" media="screen" href="style.css" />
+
+        <script type="text/javascript" charset="utf-8" src="jquery-1.2.1.pack.js"></script>
+	    <script type="text/javascript" charset="utf-8" src="phonegap.js"></script>
+
+		<script type="text/javascript" charset="utf-8">	
+		
+	    function getLocation() {
+	      debug.log("getLocation");
+	      navigator.notification.activityStart();
+	      var suc = function(p){
+	        debug.log(p.latitude + " " + p.longitude);
+	        // navigator.notification.alert(p.latitude + " " + p.longitude, "Your GeoLocation", "Thanks");
+			latitude = p.latitude;
+			longitude = p.longitude;
+	        navigator.notification.activityStop();
+	      };
+	      var fail = function(){};
+	      navigator.geolocation.getCurrentPosition(suc,fail);
+	    }
+
+		// the idea is to run Geolocation upon loading the mobile app, but this causes problems currently.. need to investigate if phonegap is improperly being called or what.
+		// getLocation();
+		
+		
+		/* Appends item metadata retrieved using the retrieveItems function in list format
+		 * on the items-browse div, and on individual show pages.
+		 **/
+		
+		function displayItems(itemMetadata) {
+			// Declare variables for data included in JSON feed
+			var totalNumberItems = itemMetadata.total_items;
+			var pageNumber = itemMetadata.page_number;
+			var tagName = itemMetadata.tag_name;
+			var collectionId = itemMetadata.collection_id;
+			var collectionName = itemMetadata.collection_name;
+			
+            /* Here we'll loop through our items, and for each of them create a list item
+             * that uses the item title for its text node. When you click on the 
+             * list item, it emptys the items-show node.
+             **/
+
+			// Empty the items-list div
+			$('#items-list').empty();
+
+			$.each(itemMetadata.items, function(i,item){
+				
+				// Create a list of item titles on the browse page
+				$('<li>').html('<div class="item hentry"><div class="item-meta"><div class="item-img"><img src="'+item.square_thumbnail+'"></div><h2><a href="#">'+item.title+'</a></h2><p>'+item.distance_away+' Miles away</p></div></div>').appendTo('#items-list').click(function() {
+					
+				    // Hide the browse page when item title is clicked
+				    $('#items-browse').hide();
+
+					$('#items-show').show();
+
+				    // Empty the items-show div, so we only have one item in there
+				    $('#items-show').empty();
+
+					$('<li>').html('<h2><a href="#">'+item.title+'</a></h2>').appendTo('#items-show');
+
+					// Append the new image to the item-image div
+                    $("<img/>").attr("src", item.square_thumbnail).appendTo("#items-show");
+
+					// Add all item metdata to the show page
+					if (item.description) { content += '<h3>Description</h3><p>' + item.description + '</p>'; }
+					if (item.subject) { content += '<h3>Subject</h3><p>' + item.subject + '</p>'; }
+					if (item.creator) { content += '<h3>Creator</h3><p>' + item.creator + '</p>'; }
+					if (item.source) { content += '<h3>Source</h3><p>' + item.source + '</p>'; }
+					if (item.publisher) { content += '<h3>Publisher</h3><p>' + item.publisher + '</p>'; }
+					if (item.date) { content += '<h3>Date</h3><p>' + item.date + '</p>'; }
+					if (item.original_format) { content += '<h3>Original Format</h3><p>' + item.original_format + '</p>'; }
+					if (item.institution) { content += '<h3>Institution</h3><p><a href="#" class="' + item.institution + '">' + item.institution + '</a></p>' }
+					content += '<br/>';
+					$(content).appendTo("#items-show");  
+
+				});
+			});
+			
+			// Call the buildPagination function to display appropriate back & next buttons
+			buildPagination(pageNumber, totalNumberItems, tagName, collectionId, collectionName);
+		}
+		
+		/* Retrieves the Items object from an Omeka installation.  This object will be parsed
+		 * using the displayItems function.
+		 **/
+		
+		function retrieveItems(pageNumber, tagName, collectionId) {
+			var itemsBrowseUrl;
+			
+			// URL for the items browse page
+			itemsBrowseUrl = "http://dev.omeka.org/artinthecity/items/browse/";
+			
+			// Will add the page number parameter to URL if applicable
+			if (pageNumber) { itemsBrowseUrl+=pageNumber+'/'; }
+			
+			// Add the appropriate JSON output and callback
+			itemsBrowseUrl += '?output=jsonp&callback=?';
+			
+			if (tagName) { itemsBrowseUrl+='&tagName='+tagName; }
+			if (collectionId) { itemsBrowseUrl+='&collection='+collectionId; }
+			
+			// See line 28 for an explaination of the problem.  This seems related.
+			// if (latitude && longitude) { itemsBrowseUrl+='&latitude='+latitude+'&longitude'+longitude; }
+
+			$.getJSON(itemsBrowseUrl, displayItems);
+		}
+		
+		/* Based on retrieveItems, retrieveTags function pulls down a list of all site-wide tags **/
+
+		function retrieveTags() {
+			var tagsBrowseUrl;
+
+			// Url for the tags browse page
+			tagsBrowseUrl = "http://dev.omeka.org/artinthecity/items/tags/";
+			
+			// Add the appropriate JSON output and callback
+			tagsBrowseUrl += '?output=jsonp&callback=?';
+			
+			$.getJSON(tagsBrowseUrl, displayTagCloud);
+		}
+
+		/* Appends tags retrieved using the retrieveTags function on the items-browse-by-tag div **/
+
+		function displayTagCloud(tagData) {
+			
+			/* Loop through tags, creating list of them w/ CSS classes that will be styled **/
+			$.each(tagData.tags, function(i, tag){
+				// Create a list of item titles on the browse page
+				$('<li class="'+tag.class+'">').html('<a href="#">'+tag.name+'</a>').appendTo('#tags-list');
+			});
+		}
+		
+		// By default, retrieve all Omeka items from the 1st page of items/browse
+		retrieveItems(1, null, null);
+
+		/* Based upon the total number of items, and the particular page that is being browsed
+		 * on the items/browse page, buildPagination creates 
+		 **/
+
+		function buildPagination(pageNumber, totalNumberItems, tagName, collectionId, collectionName) {
+			// Number of items returned per page of Output
+			var itemsPerPage = 10;
+
+			// If no pageNumber is set, declare it as page one
+			if (pageNumber = null) { pageNumber = 1 }
+
+			// Figure out how many item pages you need to create
+			var numberOfItemPages = totalNumberItems / itemsPerPage;
+
+			// Round that decimal up to its ceiling if possible
+			numberOfItemPages = Math.ceil(numberOfItemPages);
+
+			// Empty the item-pagination div, in case old links are there
+			$('#item-pagination').empty();
+
+			// Display html for back button if there should be one
+			var lastPageNumber = pageNumber - 1;
+			
+			if (pageNumber > 1) {
+				$('<li class="pagination_next">').html('<a href="#" onclick="retrieveItems('+lastPageNumber+', '+tagName+', '+collectionId+');">< Previous Results</a>').appendTo('#item-pagination');
+			}
+			
+			// Display html for next button if there should be one
+			var nextPageNumber = pageNumber + 1;
+			
+			if (pageNumber < totalNumberItems) {
+				$('<li class="pagination_next">').html('<a href="#" onclick="retrieveItems('+nextPageNumber+', '+tagName+', '+collectionId+');">Next Results ></a>').appendTo('#item-pagination');
+			}
+			
+			// Success.  Party like it's 1999.
+		}
+
+		/* Specify the basic click interactions on the page; hiding and showing of divs.  There
+		 * may be an elegant way of doing this.  Not sure. [DL]
+		 **/
+		
+		$(document).ready(function() {
+			// An initial hide of all the divs on the screen. Seems like a weak implmentation.. maybe not.
+			$('#items-browse, #items-show, #collections-browse, #items-browse-by-tag').hide();
+			
+			// Top-level navigation, "Places", "Tags", and "Art"
+			$("#nav-places").click(function() {
+				$("#places-list").show();
+				$('#items-show, #items-browse, #items-browse-by-tag').hide();
+			});
+			
+			$("#nav-tags").click(function() {
+				$("#items-browse-by-tag").show();
+				retrieveTags();
+				$('#items-show, #items-browse, #places-list').hide();
+			});
+			
+			$("#nav-art").click(function() {
+				$("#items-browse").show();
+				$('#items-show, #items-browse-by-tag, #places-list').hide();
+			});
+			
+			/* Place name links displayed on div#place-list, connecting to specific collections
+			 * These collection names are hard-coded, but perhaps they could be dynamic?
+			 *
+			 * Ideally, this would specify something like a custom function called retrieveItems
+			 * which accepts the collection variable.  Once the collection variable is set, then
+			 * the query string is modified, and only collection-specific items are displayed.
+			 * In addition, a div (items-browse) would be shared.
+			 **/
+
+			$("div#places-list .white-house").click(function() {
+				$("#items-browse").show();
+				$('#items-show, #items-browse-by-tag, #places-list').hide();
+				$('#items-list').empty();
+				retrieveItems(null, null, 1);
+			})
+
+			$("div#places-list .us-capitol").click(function() {
+				$("#items-browse").show();
+				$('#items-show, #items-browse-by-tag, #places-list').hide();
+				$('#items-list').empty();
+				retrieveItems(null, null, 2);
+			})
+
+			$("div#places-list .navy-yard").click(function() {
+				$("#items-browse").show();
+				$('#items-show, #items-browse-by-tag, #places-list').hide();
+				$('#items-list').empty();
+				retrieveItems(null, null, 3);
+			})
+			
+			$("div#places-list .rock-creek-park").click(function() {
+				$("#items-browse").show();
+				$('#items-show, #items-browse-by-tag, #places-list').hide();
+				$('#items-list').empty();
+				retrieveItems(null, null, 4);
+			})
+		});
+        </script>
+    </head>
+    <body id="index">
+
+	<div id="wrap">
+
+		<!-- Title header for the mobile application -->
+		<div id="header">
+			<div id="site-title"><a href="#">Art in the City: DC</a></div>
+			<h3>Explore by Place, Tag, or Art</h3>
+		</div>
+		
+		<!-- Primary navigation that's displayed throughout the app -->
+		<div id="primary-nav">
+			<ul class="navigation">
+				<li id="nav-places"><a href="#">Places</a></li>
+				<li id="nav-tags"><a href="#">Tags</a></li>
+				<li id="nav-art"><a href="#">Art</a></li>
+			</ul>
+		</div>
+		
+		<!-- Container and primary divs mobile app.  This is where the action is. -->
+		<div id="content">	
+		<div id="primary">
+
+			<!-- The following divs are equivalent of separate pages on a regular Omeka site -->
+
+				<!-- Display list of , which relate to items in collections -->
+				<div id="places-list">
+					<h1>Places</h1>
+					<p>Navigate artwork located at specific places in Washington, DC.</p>
+					<h2 class="white-house">White House</h2>
+					<h2 class="us-capitol">U.S. Capitol</h2>
+					<h2 class="navy-yard">Washington Navy Yard</h2>
+					<h2 class="rock-creek-park">Rock Creek Park</h2>
+				</div>
+				
+				<!-- Displayed by clicking the "Tags" link -->
+				<div id="items-browse-by-tag">
+					<h1>Browse by tags</h1>
+					
+					<!-- The tags list -->
+					<div id="tags-list"></div>
+				</div>
+		
+				<!-- Displayed by clicking the "Art" link -->
+				<div id="items-browse">	
+					<h1>Browse Art</h1>
+					
+					<!-- The pagination links for items will be displayed in here -->
+					<div id="item-pagination">
+					</div>
+					
+					<!-- Where item titles are listed on the browse page.  Easily emptied for new pages -->
+					<div id="items-list"></div>
+				</div>
+
+					<!-- Displayed by clicking art on the items browse page -->
+					<div id="items-show">
+				
+						<!-- Display a square-thumbnail image for an item's file -->
+						<div id="item-image"></div>
+						
+						<!-- Displayed by clicking the institution link on the items show page -->
+						<div id="item-show-institution"></div>
+					</div>
+		</div>
+		</div>
+	</div>
+    </body>    
+</html>
