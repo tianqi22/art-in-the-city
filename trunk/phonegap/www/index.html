@@ -26,6 +26,7 @@
 	    }
 
 		// the idea is to run Geolocation upon loading the mobile app, but this causes problems currently.. need to investigate if phonegap is improperly being called or what.
+		// IMPORTANT: line 110 (or thereabouts) will need to have its hard-coded lat/long removed once the implementation of getLocation is fixed.
 		// getLocation();
 		
 		
@@ -52,7 +53,7 @@
 			$.each(itemMetadata.items, function(i,item){
 				
 				// Create a list of item titles on the browse page
-				$('<li>').html('<div class="item hentry"><div class="item-meta"><div class="item-img"><img src="'+item.square_thumbnail+'"></div><h2><a href="#">'+item.title+'</a></h2><p>'+item.distance_away+' Miles away</p></div></div>').appendTo('#items-list').click(function() {
+				$('<li>').html('<div class="item hentry"><div class="item-meta"><div class="item-img"><img src="'+item.square_thumbnail+'"></div><h2><a href="#">'+item.title+'</a></h2><p>'+item.distance_away_miles.toFixed(2)+' Miles away</p></div></div>').appendTo('#items-list').click(function() {
 					
 				    // Hide the browse page when item title is clicked
 				    $('#items-browse').hide();
@@ -105,7 +106,9 @@
 			if (tagName) { itemsBrowseUrl+='&tagName='+tagName; }
 			if (collectionId) { itemsBrowseUrl+='&collection='+collectionId; }
 			
-			// See line 28 for an explaination of the problem.  This seems related.
+			// See line 28 for an explaination of the problem.  In the meantime, the lat/long is added
+			// to get some basic geolocation info.
+			itemsBrowseUrl+='&latitude=38.920075&longitude=-77.032201';
 			// if (latitude && longitude) { itemsBrowseUrl+='&latitude='+latitude+'&longitude'+longitude; }
 
 			$.getJSON(itemsBrowseUrl, displayItems);
