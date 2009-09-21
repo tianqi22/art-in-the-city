@@ -11,6 +11,8 @@ $multipleItemMetadata = array();
 
 	// We'll loop through each item on the browse page and add their metadata to that array
 	while (loop_items()):
+
+		$item = get_current_item();
 		
 		// If an item has files, loop through them and add them to the array
 		if (item_has_files()): 
@@ -24,7 +26,6 @@ $multipleItemMetadata = array();
 			endwhile;
 		endif;
         
-		$item = get_current_item();
 		// Grab the item longitude and latitude
 		$location = get_db()->getTable('Location')->findLocationByItem($item, true);
 		
@@ -58,6 +59,10 @@ $pageNumber = $request->getParam('page');
 if ($tagName) { echo '"tag_name": ' . $tagName . ','; }
 
 if ($collectionId) { echo '"collection_id": ' . $collectionId . ','; }
+
+$collection = get_collection_by_id($collectionId);
+
+echo '"collection_name": "' . $collection->name . '",';
 
 echo '"page_number": ' . $pageNumber . ',';
 
